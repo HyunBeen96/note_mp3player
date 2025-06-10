@@ -547,26 +547,38 @@ class ExampleApp(QMainWindow, form_class):
             if file.endswith(".py") and not file.startswith("__"):
                 module_name = file[:-3]
                 file_path = os.path.join(widget_dir, file)
+                print(f"[📂 Trying to load]: {file_path}")
 
                 action = QAction(module_name, self)
                 self.menuWidgets.addAction(action)
 
-                def create_and_dock_widget(file_path=file_path, module_name=module_name):
-                    spec = importlib.util.spec_from_file_location(module_name, file_path)
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
+                # 👉 함수 분리해서 클로저 변수 문제 제거
+                action.triggered.connect(
+                    lambda checked, fp=file_path, mn=module_name: self.create_and_dock_widget(fp, mn)
+                )
 
-                    if hasattr(module, "create_widget"):
-                        widget = module.create_widget()
+    def create_and_dock_widget(self, file_path, module_name):
+        try:
+            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            if spec is None or spec.loader is None:
+                raise ImportError("Failed to load spec.")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
 
-                        dock = QDockWidget(module_name, self)
-                        dock.setWidget(widget)
-                        dock.setObjectName(f"dock_{module_name}")
-                        dock.setWindowTitle(f"{module_name} 위젯")
-                        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+            if hasattr(module, "create_widget"):
+                widget = module.create_widget()
+                if not isinstance(widget, QWidget):
+                    raise TypeError("create_widget() did not return QWidget")
 
-                action.triggered.connect(create_and_dock_widget)
-
+                dock = QDockWidget(module_name, self)
+                dock.setWidget(widget)
+                dock.setObjectName(f"dock_{module_name}")
+                dock.setWindowTitle(module_name)
+                self.addDockWidget(Qt.RightDockWidgetArea, dock)
+            else:
+                raise AttributeError("create_widget() not found in module")
+        except Exception as e:
+            print(f"[❌ ERROR] '{module_name}' 위젯 로딩 실패: {e}")
 
 
 # 프로그램의 진입점. 실제로 GUI 실행
