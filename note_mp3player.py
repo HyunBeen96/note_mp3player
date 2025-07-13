@@ -580,7 +580,6 @@ class ExampleApp(QMainWindow, form_class):
         except Exception as e:
             print(f"[❌ ERROR] '{module_name}' 위젯 로딩 실패: {e}")
 
-
 # 프로그램의 진입점. 실제로 GUI 실행
 if __name__ == "__main__":
     app = QApplication(sys.argv)    # 앱 객체 생성
